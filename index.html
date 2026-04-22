@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 
-  <title>AR Cactus - Cursore Piatto e Fluido</title>
+  <title>AR Cactus - Cursore Piatto</title>
   
   <script src="./external/scripts/8frame-1.5.0.min.js"></script>
   <script src="./external/xrextras/xrextras.js"></script>
@@ -57,7 +57,7 @@
 
 <div id="status">🔍 Inizializzazione AR...</div>
 <div class="over">
-  <span id="promptText">🎯 Segui il cerchio a terra, poi tocca</span>
+  <span id="promptText">🎯 Segui il cerchio ARANCIONE a terra, poi tocca</span>
 </div>
 
 <a-scene
@@ -73,13 +73,11 @@
     <a-asset-item id="cactusModel" src="assets/cactus.glb"></a-asset-item>
   </a-assets>
 
-  <!-- CURSORE: cerchio PIATTO a terra (rotation -90 per renderlo orizzontale) -->
+  <!-- CURSORE: cerchio PIATTO a terra (rotation -90) -->
   <a-entity id="cursor" position="0 0 0" rotation="-90 0 0">
-    <a-ring radius="0.4" radius-tubular="0.05" color="#ff4400" material="transparent: true; opacity: 0.9"></a-ring>
-    <a-circle radius="0.35" color="#ff6600" material="transparent: true; opacity: 0.4"></a-circle>
-    <a-ring radius="0.2" radius-tubular="0.03" color="#ffffff" material="transparent: true; opacity: 0.8"></a-ring>
-    <!-- Puntino centrale -->
-    <a-sphere radius="0.05" color="#ffffff" position="0 0.02 0"></a-sphere>
+    <a-ring radius="0.4" radius-tubular="0.05" color="#ff6600" material="transparent: true; opacity: 0.9"></a-ring>
+    <a-circle radius="0.35" color="#ff6600" material="transparent: true; opacity: 0.3"></a-circle>
+    <a-ring radius="0.15" radius-tubular="0.03" color="#ffffff" material="transparent: true; opacity: 0.8"></a-ring>
   </a-entity>
 
   <a-camera
@@ -112,8 +110,7 @@
   window.onxrloaded = function() {
     console.log('8th Wall ready');
     if (XR8 && XR8.XrController) {
-      // Abilita plane detection per il reticleManager
-      XR8.XrController.configure({ planeDetection: { enabled: true } });
+      XR8.XrController.configure({ planeDetection: { enabled: false } });
     }
     document.getElementById('status').innerHTML = '✅ AR pronto! Muovi il telefono';
     document.getElementById('status').style.color = '#aaffaa';
@@ -127,41 +124,34 @@
 </script>
 
 <script>
-  // Componente cursor-place con reticleManager NATIVO di 8th Wall (super fluido)
+  // Componente cursor-place con raycast manuale e cursore piatto
   AFRAME.registerComponent('cursor-place', {
     init() {
+      this.raycaster = new THREE.Raycaster()
+      this.camera = document.getElementById('camera')
+      this.threeCamera = this.camera.getObject3D('camera')
+      this.ground = document.getElementById('ground')
+      this.rayOrigin = new THREE.Vector2(0, 0)
+      this.cursorLocation = new THREE.Vector3(0, 0, 0)
       this.cursor = document.getElementById('cursor')
       this.currentCactus = null
       this.prompt = document.getElementById('promptText')
-      this.hasPlaced = false
+      
+      // Variabile per movimento fluido
+      this.smoothX = 0
+      this.smoothZ = 0
       
       // Al click, posiziona il cactus
       this.el.sceneEl.addEventListener('click', () => {
-        // Usa il reticleManager di 8th Wall per ottenere la posizione
-        if (!XR8?.XrController?.reticleManager) return
+        if (!this.cursorLocation) return
         
-        const position = XR8.XrController.reticleManager.getReticlePosition?.()
-        const isOnPlane = XR8.XrController.reticleManager.getIsOnPlane?.()
-        
-        if (!position || !isOnPlane) {
-          this.prompt.innerHTML = '⚠️ Inquadra un pavimento prima di toccare'
-          setTimeout(() => {
-            if (this.prompt.innerHTML.includes('Inquadra')) {
-              this.prompt.innerHTML = '🎯 Segui il cerchio a terra, poi tocca'
-            }
-          }, 1500)
-          return
-        }
-        
-        // Rimuovi cactus precedente
         if (this.currentCactus) {
           this.currentCactus.parentNode?.removeChild(this.currentCactus)
         }
         
-        // Crea nuovo cactus
         const cactus = document.createElement('a-entity')
         cactus.setAttribute('gltf-model', '#cactusModel')
-        cactus.setAttribute('position', position)
+        cactus.setAttribute('position', this.cursorLocation)
         cactus.setAttribute('scale', '0 0 0')
         cactus.setAttribute('shadow', { receive: false })
         
@@ -171,7 +161,6 @@
         this.el.sceneEl.appendChild(cactus)
         this.currentCactus = cactus
         
-        // Animazione di crescita
         setTimeout(() => {
           cactus.setAttribute('animation', {
             property: 'scale',
@@ -181,29 +170,37 @@
           })
         }, 10)
         
-        // Feedback visivo
         this.prompt.innerHTML = '🌵 Cactus posizionato!'
         setTimeout(() => {
-          this.prompt.innerHTML = '🎯 Segui il cerchio a terra, poi tocca'
+          this.prompt.innerHTML = '🎯 Segui il cerchio arancione, poi tocca'
         }, 2000)
       })
     },
     
     tick() {
-      // Aggiorna la posizione del cursore usando il reticleManager nativo
-      if (!this.cursor) return
-      if (!XR8?.XrController?.reticleManager) return
+      if (!this.ground?.object3D) return
       
-      const position = XR8.XrController.reticleManager.getReticlePosition?.()
-      const isOnPlane = XR8.XrController.reticleManager.getIsOnPlane?.()
+      // Raycast dal centro dello schermo al terreno
+      this.raycaster.setFromCamera(this.rayOrigin, this.threeCamera)
+      const intersects = this.raycaster.intersectObject(this.ground.object3D, true)
       
-      if (position && isOnPlane) {
-        // Posiziona il cursore PIATTO a terra
-        this.cursor.object3D.position.copy(position)
-        this.cursor.object3D.position.y += 0.05  // Leggermente sopra il terreno
-        this.cursor.setAttribute('visible', 'true')
-      } else {
-        this.cursor.setAttribute('visible', 'false')
+      if (intersects.length > 0) {
+        this.cursorLocation = intersects[0].point
+      }
+      
+      // Movimento fluido del cursore
+      if (this.cursor) {
+        // Smoothing factor (0.2 = più fluido, 0.5 = più reattivo)
+        const smooth = 0.25
+        
+        this.smoothX += (this.cursorLocation.x - this.smoothX) * smooth
+        this.smoothZ += (this.cursorLocation.z - this.smoothZ) * smooth
+        
+        this.cursor.object3D.position.x = this.smoothX
+        this.cursor.object3D.position.z = this.smoothZ
+        this.cursor.object3D.position.y = this.cursorLocation.y + 0.05
+        
+        // Il cursore è già piatto grazie a rotation="-90 0 0"
       }
     }
   })
