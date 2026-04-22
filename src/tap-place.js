@@ -1,6 +1,5 @@
-// Component that places cacti where the ground is clicked
-
-export const tapPlaceComponent = {
+// Componente tap-place (versione browser, senza export)
+AFRAME.registerComponent('tap-place', {
   schema: {
     min: {default: 6},
     max: {default: 10},
@@ -9,9 +8,14 @@ export const tapPlaceComponent = {
     const ground = document.getElementById('ground')
     this.prompt = document.getElementById('promptText')
     
+    if (!ground) {
+      console.error('Ground not found!')
+      return
+    }
+    
     ground.addEventListener('click', (event) => {
       // Dismiss the prompt text.
-      this.prompt.style.display = 'none'
+      if (this.prompt) this.prompt.style.display = 'none'
       
       // Create new entity for the new object
       const newElement = document.createElement('a-entity')
@@ -47,4 +51,4 @@ export const tapPlaceComponent = {
       })
     })
   },
-}
+})
