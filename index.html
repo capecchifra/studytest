@@ -1,11 +1,9 @@
 <!DOCTYPE html>
 <html>
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-
-  <title>AR Cactus - Reticle a terra</title>
+  <title>AR Cactus - Con cursore a terra</title>
   
   <script src="./external/scripts/8frame-1.5.0.min.js"></script>
   <script src="./external/xrextras/xrextras.js"></script>
@@ -17,70 +15,16 @@
   <meta name="8thwall:package" content="@8thwall.landing-page"/>
 
   <style>
-    body { margin: 0; overflow: hidden; font-family: system-ui, sans-serif; }
-    
-    .over {
-      position: fixed;
-      bottom: 30px;
-      left: 0;
-      right: 0;
-      text-align: center;
-      z-index: 10;
-      pointer-events: none;
-    }
-    #promptText {
-      background: rgba(0,0,0,0.7);
-      color: white;
-      padding: 12px 28px;
-      border-radius: 40px;
-      font-size: 18px;
-      display: inline-block;
-    }
-    
-    #resetBtn {
-      position: fixed;
-      bottom: 120px;
-      right: 20px;
-      background: #ff6600;
-      color: white;
-      border: none;
-      border-radius: 50px;
-      padding: 15px 25px;
-      font-size: 16px;
-      font-weight: bold;
-      z-index: 20;
-      cursor: pointer;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-      transition: transform 0.2s;
-      pointer-events: auto;
-    }
-    #resetBtn:active {
-      transform: scale(0.95);
-    }
-    
-    #status {
-      position: fixed;
-      top: 20px;
-      left: 20px;
-      background: rgba(0,0,0,0.6);
-      color: #ffaa00;
-      padding: 8px 15px;
-      border-radius: 20px;
-      font-size: 12px;
-      z-index: 20;
-      pointer-events: none;
-      font-family: monospace;
-    }
+    .over { position: fixed; bottom: 30px; left: 0; right: 0; text-align: center; z-index: 10; pointer-events: none; }
+    #promptText { background: rgba(0,0,0,0.7); color: white; padding: 12px 28px; border-radius: 40px; font-size: 18px; display: inline-block; }
+    #status { position: fixed; top: 20px; left: 20px; background: rgba(0,0,0,0.6); color: #ffaa00; padding: 8px 15px; border-radius: 20px; font-size: 12px; z-index: 20; pointer-events: none; }
   </style>
 </head>
 
 <body>
 
 <div id="status">🔍 Inizializzazione AR...</div>
-<div class="over">
-  <span id="promptText">🎯 Sposta il telefono, poi tocca per posizionare</span>
-</div>
-<button id="resetBtn">🔄 RIPOSIZIONA</button>
+<div class="over"><span id="promptText">🎯 Segui il cerchio verde a terra, poi tocca</span></div>
 
 <a-scene
   xrconfig
@@ -94,251 +38,107 @@
     <img id="groundTex" src="assets/sand.jpg">
     <a-asset-item id="cactusModel" src="assets/cactus.glb"></a-asset-item>
     
-    <!-- Materiale per il reticle (cerchio a terra) -->
-    <a-mixin id="reticleMat">
-      <a-ring radius="0.2" radius-tubular="0.02" color="#00ff00" material="transparent: true; opacity: 0.8; side: double"></a-ring>
-      <a-circle radius="0.18" color="#00ff00" material="transparent: true; opacity: 0.3"></a-circle>
+    <!-- Cursore/cerchio a terra -->
+    <a-mixin id="cursorMat">
+      <a-ring radius="0.25" radius-tubular="0.03" color="#00ff00" material="transparent: true; opacity: 0.9"></a-ring>
+      <a-circle radius="0.22" color="#00ff00" material="transparent: true; opacity: 0.3"></a-circle>
     </a-mixin>
   </a-assets>
 
-  <a-camera
-    id="camera"
-    position="0 8 8"
-    cursor="fuse: false; rayOrigin: mouse">
-  </a-camera>
+  <a-camera id="camera" position="0 8 8"></a-camera>
 
-  <a-entity
-    light="type: directional; intensity: 0.8; castShadow: true; target: #camera"
-    position="1 4.3 2.5"
-    shadow>
-  </a-entity>
+  <!-- Entità cursore che segue il terreno -->
+  <a-entity id="cursor" mixin="cursorMat" position="0 0 0"></a-entity>
 
+  <a-entity light="type: directional; intensity: 0.8; castShadow: true; target: #camera" position="1 4.3 2.5" shadow></a-entity>
   <a-light type="ambient" intensity="0.5"></a-light>
 
-  <!-- Terreno cliccabile -->
-  <a-box
-    id="ground"
-    class="cantap"
-    scale="1000 2 1000"
-    position="0 -0.99 0"
-    material="shader: shadow; transparent: true; opacity: 0.4"
-    shadow>
-  </a-box>
+  <a-box id="ground" scale="1000 2 1000" position="0 -0.99 0" material="shader: shadow; transparent: true; opacity: 0.4" shadow></a-box>
 </a-scene>
 
 <script>
-  // ===== INIZIALIZZAZIONE 8TH WALL =====
+  // Inizializzazione 8th Wall
   window.onxrloaded = function() {
-    console.log('8th Wall ready');
     if (XR8 && XR8.XrController) {
       XR8.XrController.configure({ planeDetection: { enabled: false } });
     }
-    document.getElementById('status').innerHTML = '✅ AR pronto! Sposta il telefono per vedere il cerchio a terra';
-    document.getElementById('status').style.color = '#aaffaa';
+    document.getElementById('status').innerHTML = '✅ AR pronto! Sposta il telefono';
   };
-  
-  if (window.XR8) {
-    window.onxrloaded();
-  } else {
-    window.addEventListener('xrloaded', window.onxrloaded);
-  }
+  if (window.XR8) window.onxrloaded();
+  else window.addEventListener('xrloaded', window.onxrloaded);
 </script>
 
-<script>
-  // ===== VARIABILI =====
-  let currentCactus = null;
-  let reticleEntity = null;      // Cerchio a terra
-  let reticleVisible = false;
-  let lastHitPoint = null;
-  
-  const statusDiv = document.getElementById('status');
-  const promptDiv = document.getElementById('promptText');
-  const resetBtn = document.getElementById('resetBtn');
-  
-  // ===== CREA RETICLE (CERCHIO A TERRA) =====
-  function createReticle() {
-    if (reticleEntity) return;
-    
-    const scene = document.querySelector('a-scene');
-    reticleEntity = document.createElement('a-entity');
-    reticleEntity.setAttribute('mixin', 'reticleMat');
-    reticleEntity.setAttribute('scale', '1 1 1');
-    reticleEntity.setAttribute('visible', 'false');
-    scene.appendChild(reticleEntity);
-  }
-  
-  // ===== AGGIORNA POSIZIONE RETICLE =====
-  function updateReticlePosition(position) {
-    if (!reticleEntity) return;
-    
-    reticleEntity.setAttribute('position', `${position.x} ${position.y + 0.05} ${position.z}`);
-    reticleEntity.setAttribute('visible', 'true');
-    reticleVisible = true;
-    lastHitPoint = position;
-  }
-  
-  // ===== NASCONDI RETICLE =====
-  function hideReticle() {
-    if (reticleEntity) {
-      reticleEntity.setAttribute('visible', 'false');
-      reticleVisible = false;
-    }
-  }
-  
-  // ===== CREA CACTUS =====
-  function createCactus(position, scale = 7) {
-    const newElement = document.createElement('a-entity');
-    newElement.setAttribute('position', position);
-    
-    const randomYRotation = Math.random() * 360;
-    newElement.setAttribute('rotation', `0 ${randomYRotation} 0`);
-    
-    newElement.setAttribute('visible', 'false');
-    newElement.setAttribute('scale', '0.0001 0.0001 0.0001');
-    newElement.setAttribute('shadow', { receive: false });
-    newElement.setAttribute('gltf-model', '#cactusModel');
-    
-    document.querySelector('a-scene').appendChild(newElement);
-    
-    newElement.addEventListener('model-loaded', () => {
-      newElement.setAttribute('visible', 'true');
-      newElement.setAttribute('animation', {
-        property: 'scale',
-        to: `${scale} ${scale} ${scale}`,
-        easing: 'easeOutElastic',
-        dur: 800,
-      });
-    });
-    
-    return newElement;
-  }
-  
-  // ===== RIMUOVI CACTUS =====
-  function removeCurrentCactus() {
-    if (currentCactus) {
-      currentCactus.setAttribute('animation', {
-        property: 'scale',
-        to: '0 0 0',
-        easing: 'easeInQuad',
-        dur: 200,
-      });
-      setTimeout(() => {
-        if (currentCactus && currentCactus.parentNode) {
-          currentCactus.parentNode.removeChild(currentCactus);
-        }
-        currentCactus = null;
-      }, 200);
-    }
-  }
-  
-  // ===== POSIZIONA CACTUS =====
-  function placeCactusAt(position, scale = 7) {
-    removeCurrentCactus();
-    currentCactus = createCactus(position, scale);
-    hideReticle();
-    
-    promptDiv.innerHTML = '🌵 Cactus posizionato!';
-    setTimeout(() => {
-      promptDiv.innerHTML = '🎯 Sposta il telefono, il cerchio apparirà a terra';
-    }, 2000);
-    
-    statusDiv.innerHTML = '🌵 Cactus posizionato!';
-    setTimeout(() => {
-      statusDiv.innerHTML = '✅ AR pronto!';
-    }, 2000);
-  }
-  
-  // ===== HIT TEST PER SEGUIRE IL TERRENO =====
-  function startReticleTracking() {
-    // Usa il reticleManager di 8th Wall per tracciare il terreno
-    if (XR8 && XR8.XrController && XR8.XrController.reticleManager) {
-      // Aggiorna posizione del reticle a ogni frame
-      setInterval(() => {
-        if (!reticleEntity) return;
-        
-        const position = XR8.XrController.reticleManager.getReticlePosition?.();
-        const isOnPlane = XR8.XrController.reticleManager.getIsOnPlane?.();
-        
-        if (position && isOnPlane && !currentCactus) {
-          // Mostra il reticle solo se non c'è già un cactus posizionato
-          updateReticlePosition(position);
-        } else if (!isOnPlane || currentCactus) {
-          hideReticle();
-        }
-      }, 100);
-    }
-  }
-  
-  // ===== COMPONENTE TAP-PLACE =====
-  AFRAME.registerComponent('tap-place', {
-    schema: {
-      min: {default: 6},
-      max: {default: 10},
-    },
+<script type="module">
+  // Componente cursore + posizionamento (come nel tuo esempio)
+  AFRAME.registerComponent('cursor-place', {
     init() {
-      const ground = document.getElementById('ground');
+      this.raycaster = new THREE.Raycaster()
+      this.camera = document.getElementById('camera')
+      this.threeCamera = this.camera.getObject3D('camera')
+      this.ground = document.getElementById('ground')
+      this.rayOrigin = new THREE.Vector2(0, 0)
+      this.cursorLocation = new THREE.Vector3(0, 0, 0)
+      this.cursor = document.getElementById('cursor')
+      this.currentCactus = null
+      this.prompt = document.getElementById('promptText')
       
-      ground.addEventListener('click', (event) => {
-        // Se c'è già un cactus, lo sostituiamo
-        // Usa la posizione attuale del reticle se disponibile
-        let touchPoint = event.detail.intersection?.point;
+      // Al click, posiziona il cactus
+      this.el.sceneEl.addEventListener('click', () => {
+        if (!this.cursorLocation) return
         
-        // Se abbiamo una posizione valida dal reticle, usiamo quella
-        if (lastHitPoint && !currentCactus) {
-          touchPoint = lastHitPoint;
+        // Rimuovi cactus precedente
+        if (this.currentCactus) {
+          this.currentCactus.parentNode?.removeChild(this.currentCactus)
         }
         
-        if (touchPoint) {
-          const randomScale = Math.floor(Math.random() * 
-            (Math.floor(this.data.max) - Math.ceil(this.data.min)) + 
-            Math.ceil(this.data.min));
-          placeCactusAt(touchPoint, randomScale);
-        }
-      });
+        // Crea nuovo cactus
+        const cactus = document.createElement('a-entity')
+        cactus.setAttribute('gltf-model', '#cactusModel')
+        cactus.setAttribute('position', this.cursorLocation)
+        cactus.setAttribute('scale', '0 0 0')
+        cactus.setAttribute('shadow', { receive: false })
+        
+        const randomY = Math.random() * 360
+        cactus.setAttribute('rotation', `0 ${randomY} 0`)
+        
+        this.el.sceneEl.appendChild(cactus)
+        this.currentCactus = cactus
+        
+        setTimeout(() => {
+          cactus.setAttribute('animation', {
+            property: 'scale',
+            to: '6 6 6',
+            easing: 'easeOutElastic',
+            dur: 800
+          })
+        }, 10)
+        
+        if (this.prompt) this.prompt.style.display = 'none'
+      })
     },
-  });
-  
-  // Aggiungi il componente alla scena
-  const scene = document.querySelector('a-scene');
-  scene.setAttribute('tap-place', '');
-  
-  // ===== PULSANTE RIPOSIZIONA =====
-  resetBtn.addEventListener('click', () => {
-    if (currentCactus) {
-      removeCurrentCactus();
-      promptDiv.innerHTML = '🗑️ Cactus rimosso! Sposta il telefono per vedere il cerchio a terra';
-      statusDiv.innerHTML = '🗑️ Cactus rimosso. Sposta il telefono per vedere il cerchio';
-      setTimeout(() => {
-        if (promptDiv.innerHTML.includes('rimosso')) {
-          promptDiv.innerHTML = '🎯 Sposta il telefono, il cerchio apparirà a terra';
-        }
-      }, 2500);
-    } else {
-      promptDiv.innerHTML = '⚠️ Nessun cactus da rimuovere';
-      setTimeout(() => {
-        if (promptDiv.innerHTML === '⚠️ Nessun cactus da rimuovere') {
-          promptDiv.innerHTML = '🎯 Sposta il telefono, il cerchio apparirà a terra';
-        }
-      }, 1500);
-    }
-  });
-  
-  // ===== INIT =====
-  function init() {
-    createReticle();
     
-    // Aspetta che XR8 sia pronto per iniziare il tracking
-    const waitForXR = setInterval(() => {
-      if (XR8 && XR8.XrController && XR8.XrController.reticleManager) {
-        clearInterval(waitForXR);
-        console.log('Reticle tracking avviato');
-        startReticleTracking();
+    tick() {
+      if (!this.ground?.object3D) return
+      
+      // Raycast dal centro schermo al terreno
+      this.raycaster.setFromCamera(this.rayOrigin, this.threeCamera)
+      const intersects = this.raycaster.intersectObject(this.ground.object3D, true)
+      
+      if (intersects.length > 0) {
+        this.cursorLocation = intersects[0].point
       }
-    }, 500);
-  }
+      
+      // Muovi il cursore verso il punto
+      if (this.cursor) {
+        this.cursor.object3D.position.lerp(this.cursorLocation, 0.3)
+        this.cursor.object3D.position.y += 0.05  // Evita z-fighting
+        this.cursor.object3D.rotation.y = this.threeCamera.rotation.y
+      }
+    }
+  })
   
-  // Avvia tutto
-  window.addEventListener('load', init);
+  // Applica il componente alla scena
+  document.querySelector('a-scene').setAttribute('cursor-place', '')
 </script>
 
 </body>
