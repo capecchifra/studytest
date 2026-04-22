@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 
-  <title>AR Cactus - Con Cursore a Terra</title>
+  <title>AR Cactus - Cursore Fluido</title>
   
   <script src="./external/scripts/8frame-1.5.0.min.js"></script>
   <script src="./external/xrextras/xrextras.js"></script>
@@ -57,7 +57,7 @@
 
 <div id="status">🔍 Inizializzazione AR...</div>
 <div class="over">
-  <span id="promptText">🎯 Segui il CUBO ROSSO a terra, poi tocca</span>
+  <span id="promptText">🎯 Segui il disco a terra, poi tocca</span>
 </div>
 
 <a-scene
@@ -73,10 +73,12 @@
     <a-asset-item id="cactusModel" src="assets/cactus.glb"></a-asset-item>
   </a-assets>
 
-  <!-- CURSORE: cubo rosso con centro giallo (ben visibile) -->
-  <a-box id="cursor" color="#ff0000" width="0.4" height="0.1" depth="0.4" position="0 0 0">
-    <a-box color="#ffff00" width="0.2" height="0.05" depth="0.2" position="0 0.08 0"></a-box>
-  </a-box>
+  <!-- CURSORE: disco piatto e luminoso -->
+  <a-entity id="cursor" position="0 0 0">
+    <a-ring radius="0.35" radius-tubular="0.05" color="#ff4400" material="transparent: true; opacity: 0.9"></a-ring>
+    <a-circle radius="0.30" color="#ff6600" material="transparent: true; opacity: 0.5"></a-circle>
+    <a-ring radius="0.15" radius-tubular="0.03" color="#ffffff" material="transparent: true; opacity: 0.8"></a-ring>
+  </a-entity>
 
   <a-camera
     id="camera"
@@ -110,7 +112,7 @@
     if (XR8 && XR8.XrController) {
       XR8.XrController.configure({ planeDetection: { enabled: false } });
     }
-    document.getElementById('status').innerHTML = '✅ AR pronto! Cerca il cubo rosso a terra';
+    document.getElementById('status').innerHTML = '✅ AR pronto! Muovi il telefono';
     document.getElementById('status').style.color = '#aaffaa';
   };
   
@@ -122,7 +124,7 @@
 </script>
 
 <script>
-  // Componente cursore-place con movimento fluido
+  // Componente cursore-place OTTIMIZZATO per movimento fluido
   AFRAME.registerComponent('cursor-place', {
     init() {
       this.raycaster = new THREE.Raycaster()
@@ -135,16 +137,17 @@
       this.currentCactus = null
       this.prompt = document.getElementById('promptText')
       
+      // Variabile per il movimento fluido
+      this.smoothPosition = new THREE.Vector3(0, 0, 0)
+      
       // Al click, posiziona il cactus
       this.el.sceneEl.addEventListener('click', () => {
         if (!this.cursorLocation) return
         
-        // Rimuovi cactus precedente
         if (this.currentCactus) {
           this.currentCactus.parentNode?.removeChild(this.currentCactus)
         }
         
-        // Crea nuovo cactus
         const cactus = document.createElement('a-entity')
         cactus.setAttribute('gltf-model', '#cactusModel')
         cactus.setAttribute('position', this.cursorLocation)
@@ -157,7 +160,6 @@
         this.el.sceneEl.appendChild(cactus)
         this.currentCactus = cactus
         
-        // Animazione di crescita
         setTimeout(() => {
           cactus.setAttribute('animation', {
             property: 'scale',
@@ -167,14 +169,16 @@
           })
         }, 10)
         
-        // Feedback visivo
         if (this.prompt) {
           this.prompt.innerHTML = '🌵 Cactus posizionato!'
           setTimeout(() => {
-            this.prompt.innerHTML = '🎯 Segui il cubo rosso a terra, poi tocca'
+            this.prompt.innerHTML = '🎯 Segui il disco arancione, poi tocca'
           }, 2000)
         }
       })
+      
+      // Inizializza la posizione fluida
+      this.smoothPosition.copy(this.cursorLocation)
     },
     
     tick() {
@@ -188,13 +192,16 @@
         this.cursorLocation = intersects[0].point
       }
       
-      // Muovi il cursore verso il punto di intersezione (movimento fluido)
+      // Movimento fluido con smoothing esponenziale (più fluido di lerp)
       if (this.cursor) {
-        // lerp con valore 0.5 per un buon equilibrio tra fluidità e reattività
-        this.cursor.object3D.position.lerp(this.cursorLocation, 0.5)
-        // Solleva il cursore per evitare che affondi nel terreno
-        this.cursor.object3D.position.y += 0.2
-        // Ruota verso la camera
+        // Smoothing factor: più alto = più reattivo, più basso = più fluido
+        const smoothFactor = 0.25
+        
+        this.smoothPosition.x += (this.cursorLocation.x - this.smoothPosition.x) * smoothFactor
+        this.smoothPosition.z += (this.cursorLocation.z - this.smoothPosition.z) * smoothFactor
+        this.smoothPosition.y = this.cursorLocation.y + 0.1
+        
+        this.cursor.object3D.position.copy(this.smoothPosition)
         this.cursor.object3D.rotation.y = this.threeCamera.rotation.y
       }
     }
