@@ -44,7 +44,6 @@
       z-index: 10;
       text-align: center;
     }
-    .hidden { display: none; }
   </style>
 </head>
 
@@ -53,30 +52,27 @@
 <div id="status">🟡 Avvio AR...</div>
 <div id="info">🌵 Tocca il terreno per posizionare un cactus</div>
 
-<!-- Scena A-Frame con configurazione 8th Wall -->
+<!-- Scena A-Frame -->
 <a-scene
   xrconfig
-  xrweb="allowedDevices: any"
-  renderer="colorManagement: true; antialias: true"
-  xrweb="enableInteraction: true">
+  xrweb="allowedDevices: any; enableInteraction: true"
+  renderer="colorManagement: true; antialias: true">
 
-  <!-- Asset: modelli e texture -->
+  <!-- Asset: cactus fatto con primitive (nessun file esterno) -->
   <a-assets timeout="10000">
-    <!-- Crea un cactus semplice con primitive A-Frame (non serve GLB esterno) -->
     <a-mixin id="cactus">
       <a-entity>
-        <!-- Corpo principale -->
+        <!-- Corpo -->
         <a-cylinder radius="0.3" height="0.8" color="#2d6a2d" position="0 0.4 0"></a-cylinder>
-        <!-- Bracci -->
-        <a-cylinder radius="0.15" height="0.5" color="#2d6a2d" position="-0.35 0.6 0" rotation="0 0 30"></a-cylinder>
-        <a-cylinder radius="0.15" height="0.5" color="#2d6a2d" position="0.35 0.6 0" rotation="0 0 -30"></a-cylinder>
+        <!-- Braccio sinistro -->
+        <a-cylinder radius="0.12" height="0.5" color="#2d6a2d" position="-0.35 0.65 0" rotation="0 0 35"></a-cylinder>
+        <!-- Braccio destro -->
+        <a-cylinder radius="0.12" height="0.5" color="#2d6a2d" position="0.35 0.65 0" rotation="0 0 -35"></a-cylinder>
         <!-- Testa -->
-        <a-sphere radius="0.25" color="#2d6a2d" position="0 0.9 0"></a-sphere>
-        <!-- Spine (piccoli coni) -->
-        <a-cone radius-bottom="0.05" radius-top="0" height="0.1" color="#c8e6c8" position="0.2 0.5 0.3"></a-cone>
-        <a-cone radius-bottom="0.05" radius-top="0" height="0.1" color="#c8e6c8" position="-0.2 0.5 0.3"></a-cone>
-        <a-cone radius-bottom="0.05" radius-top="0" height="0.1" color="#c8e6c8" position="0.15 0.8 0.25"></a-cone>
-        <a-cone radius-bottom="0.05" radius-top="0" height="0.1" color="#c8e6c8" position="-0.15 0.8 0.25"></a-cone>
+        <a-sphere radius="0.28" color="#2d6a2d" position="0 0.95 0"></a-sphere>
+        <!-- Fiore (opzionale) -->
+        <a-sphere radius="0.12" color="#ff69b4" position="0 1.15 0.15"></a-sphere>
+        <a-sphere radius="0.08" color="#ffdd44" position="0 1.15 0.25"></a-sphere>
       </a-entity>
     </a-mixin>
   </a-assets>
@@ -86,126 +82,89 @@
 
   <!-- Luci -->
   <a-light type="ambient" intensity="0.6"></a-light>
-  <a-light type="directional" intensity="0.8" position="2 3 2"></a-light>
+  <a-light type="directional" intensity="0.9" position="2 3 2" shadow="enabled: true"></a-light>
   <a-light type="directional" intensity="0.4" position="-1 2 -2" color="#ffaa66"></a-light>
 
 </a-scene>
 
 <script>
-  // Attendi che tutto sia caricato
   window.addEventListener('load', () => {
     const statusDiv = document.getElementById('status');
     const infoDiv = document.getElementById('info');
     
     // Inizializzazione 8th Wall
     window.onxrloaded = function() {
-      console.log('XR loaded, initializing...');
-      statusDiv.innerHTML = '🟢 AR pronto! Tocca il terreno';
+      statusDiv.innerHTML = '✅ AR pronto! Tocca il terreno';
       statusDiv.style.color = '#aaffaa';
       
-      // Configura rilevamento piani
       if (XR8 && XR8.XrController) {
         XR8.XrController.configure({
-          planeDetection: {
-            enabled: true,
-            classificationType: 'floor'
-          }
+          planeDetection: { enabled: true, classificationType: 'floor' }
         });
       }
       
-      // Nascondi il messaggio di info dopo 3 secondi
       setTimeout(() => {
-        if (infoDiv) infoDiv.style.opacity = '0.5';
+        if (infoDiv) infoDiv.style.opacity = '0.7';
       }, 5000);
     };
     
-    // Se XR8 è già caricato
-    if (window.XR8) {
-      window.onxrloaded();
-    }
+    if (window.XR8) window.onxrloaded();
     
-    // Funzione per posizionare cactus
+    // Posiziona cactus
     function placeCactus(position) {
       const scene = document.querySelector('a-scene');
-      
-      // Crea nuovo cactus
       const cactus = document.createElement('a-entity');
+      
       cactus.setAttribute('mixin', 'cactus');
       cactus.setAttribute('position', `${position.x} ${position.y} ${position.z}`);
-      
-      // Rotazione casuale
-      const randomRot = Math.random() * 360;
-      cactus.setAttribute('rotation', `0 ${randomRot} 0`);
-      
-      // Scala iniziale (per animazione)
+      cactus.setAttribute('rotation', `0 ${Math.random() * 360} 0`);
       cactus.setAttribute('scale', '0 0 0');
-      cactus.setAttribute('visible', 'true');
-      
-      // Aggiungi ombra
       cactus.setAttribute('shadow', 'receive: false; cast: true');
       
-      // Aggiungi alla scena
       scene.appendChild(cactus);
       
-      // Animazione di crescita
       setTimeout(() => {
         cactus.setAttribute('animation', {
           property: 'scale',
-          to: '0.6 0.6 0.6',
+          to: '0.5 0.5 0.5',
           easing: 'easeOutElastic',
           dur: 600
         });
       }, 10);
       
-      // Feedback visivo
       statusDiv.innerHTML = '🌵 Cactus posizionato!';
-      statusDiv.style.color = '#aaffaa';
       setTimeout(() => {
-        if (statusDiv.innerHTML === '🌵 Cactus posizionato!') {
-          statusDiv.innerHTML = '🟢 AR pronto!';
-        }
+        if (statusDiv.innerHTML === '🌵 Cactus posizionato!') 
+          statusDiv.innerHTML = '✅ AR pronto!';
       }, 2000);
-      
-      // Effetto sonoro (opzionale - solo se vuoi)
-      // new Audio('data:audio/wav;base64,U3RlcmVv...').play();
     }
     
-    // Gestione tap usando A-Frame + 8th Wall
+    // Gestione tap
     const scene = document.querySelector('a-scene');
     
-    if (scene) {
-      scene.addEventListener('click', (evt) => {
-        console.log('Tap detected', evt);
+    scene.addEventListener('click', (evt) => {
+      if (evt.detail && evt.detail.intersection && evt.detail.intersection.point) {
+        placeCactus(evt.detail.intersection.point);
+      } 
+      else if (XR8 && XR8.XrController && XR8.XrController.reticleManager) {
+        const x = evt.clientX / window.innerWidth;
+        const y = evt.clientY / window.innerHeight;
         
-        // Metodo 1: usare l'intersezione di 8th Wall
-        if (evt.detail && evt.detail.intersection && evt.detail.intersection.point) {
-          const point = evt.detail.intersection.point;
-          placeCactus(point);
-        }
-        // Metodo 2: fallback con hit test manuale
-        else if (XR8 && XR8.XrController && XR8.XrController.reticleManager) {
-          const x = evt.clientX / window.innerWidth;
-          const y = evt.clientY / window.innerHeight;
-          
-          XR8.XrController.reticleManager.hitTest(x, y, (err, hit) => {
-            if (!err && hit && hit.position) {
-              placeCactus(hit.position);
-            } else {
-              console.log('No ground detected');
-              statusDiv.innerHTML = '⚠️ Tocca il terreno (piano)';
-              statusDiv.style.color = '#ffaa00';
-              setTimeout(() => {
-                if (statusDiv.innerHTML === '⚠️ Tocca il terreno (piano)') {
-                  statusDiv.innerHTML = '🟢 AR pronto!';
-                }
-              }, 1500);
-            }
-          });
-        }
-      });
-    }
+        XR8.XrController.reticleManager.hitTest(x, y, (err, hit) => {
+          if (!err && hit && hit.position) {
+            placeCactus(hit.position);
+          } else {
+            statusDiv.innerHTML = '⚠️ Tocca un piano (terra/pavimento)';
+            setTimeout(() => {
+              if (statusDiv.innerHTML === '⚠️ Tocca un piano (terra/pavimento)')
+                statusDiv.innerHTML = '✅ AR pronto!';
+            }, 1500);
+          }
+        });
+      }
+    });
     
-    // Supporto touch mobile
+    // Touch mobile
     scene.addEventListener('touchstart', (e) => {
       if (e.touches && e.touches[0]) {
         e.preventDefault();
