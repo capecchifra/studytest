@@ -6,11 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>A-Frame: Tap to Place Ground</title>
-  <meta itemprop="name" content="A-Frame: Tap to Place Ground">
-  <meta name="twitter:title" content="A-Frame: Tap to Place Ground">
-  <meta property="og:title" content="A-Frame: Tap to Place Ground">
-  <meta property="og:site_name" content="A-Frame: Tap to Place Ground">
-  <meta name="description" content="This example allows the user to grow cacti 🌵 by tapping or clicking the ground.">
   
   <script src="./external/scripts/8frame-1.5.0.min.js"></script>
   <script src="./external/xrextras/xrextras.js"></script>
@@ -22,24 +17,8 @@
   <meta name="8thwall:package" content="@8thwall.landing-page"/>
 
   <style>
-    .over {
-      position: fixed;
-      bottom: 30px;
-      left: 0;
-      right: 0;
-      text-align: center;
-      z-index: 10;
-      pointer-events: none;
-    }
-    #promptText {
-      background: rgba(0,0,0,0.7);
-      color: white;
-      padding: 12px 28px;
-      border-radius: 40px;
-      font-size: 18px;
-      display: inline-block;
-      font-family: sans-serif;
-    }
+    .over { position: fixed; bottom: 30px; left: 0; right: 0; text-align: center; z-index: 10; pointer-events: none; }
+    #promptText { background: rgba(0,0,0,0.7); color: white; padding: 12px 28px; border-radius: 40px; font-size: 18px; display: inline-block; font-family: sans-serif; }
   </style>
 </head>
 
@@ -49,9 +28,6 @@
   <span id="promptText">🌵 Tocca il terreno per posizionare</span>
 </div>
 
-<!-- 
-  MODIFICA 1: aggiunto xrconfig (obbligatorio!)
--->
 <a-scene
   xrconfig
   tap-place
@@ -59,14 +35,7 @@
   xrextras-loading
   xrextras-runtime-error
   renderer="colorManagement:true"
-  xrweb="
-    allowedDevices: any;
-    defaultEnvironmentFogIntensity: 0.5; 
-    defaultEnvironmentFloorTexture: #groundTex; 
-    defaultEnvironmentFloorColor: #FFF;
-    defaultEnvironmentSkyBottomColor: #B4C4CC; 
-    defaultEnvironmentSkyTopColor: #5ac8fa;
-    defaultEnvironmentSkyGradientStrength: 0.5;">
+  xrweb="allowedDevices: any">
 
   <a-assets>
     <img id="groundTex" src="assets/sand.jpg">
@@ -77,7 +46,7 @@
     id="camera"
     position="0 8 8"
     raycaster="objects: .cantap"
-    cursor="fuse: false; rayOrigin: mouse;">
+    cursor="fuse: false; rayOrigin: mouse">
   </a-camera>
 
   <a-entity
@@ -99,11 +68,10 @@
 </a-scene>
 
 <script>
-  // MODIFICA 2: inizializzazione obbligatoria per il binary
+  // Inizializzazione 8th Wall binary
   window.onxrloaded = function() {
     console.log('8th Wall binary ready');
     if (XR8 && XR8.XrController) {
-      // Disabilita plane detection per usare il box fittizio
       XR8.XrController.configure({ planeDetection: { enabled: false } });
     }
   };
@@ -113,6 +81,63 @@
   } else {
     window.addEventListener('xrloaded', window.onxrloaded);
   }
+</script>
+
+<script>
+  // Componente tap-place (convertito da ES module)
+  AFRAME.registerComponent('tap-place', {
+    schema: {
+      min: {default: 6},
+      max: {default: 10},
+    },
+    init() {
+      const ground = document.getElementById('ground')
+      const prompt = document.getElementById('promptText')
+      
+      if (!ground) {
+        console.error('Ground non trovato!')
+        return
+      }
+      
+      ground.addEventListener('click', (event) => {
+        // Dismiss the prompt text.
+        if (prompt) prompt.style.display = 'none'
+        
+        // Create new entity for the new object
+        const newElement = document.createElement('a-entity')
+
+        // The raycaster gives a location of the touch in the scene
+        const touchPoint = event.detail.intersection.point
+        newElement.setAttribute('position', touchPoint)
+
+        const randomYRotation = Math.random() * 360
+        newElement.setAttribute('rotation', `0 ${randomYRotation} 0`)
+
+        const randomScale = Math.floor(Math.random() * (Math.floor(this.data.max) - Math.ceil(this.data.min)) + Math.ceil(this.data.min))
+
+        newElement.setAttribute('visible', 'false')
+        newElement.setAttribute('scale', '0.0001 0.0001 0.0001')
+
+        newElement.setAttribute('shadow', {
+          receive: false,
+        })
+
+        newElement.setAttribute('gltf-model', '#cactusModel')
+        this.el.sceneEl.appendChild(newElement)
+
+        newElement.addEventListener('model-loaded', () => {
+          // Once the model is loaded, we are ready to show it popping in using an animation
+          newElement.setAttribute('visible', 'true')
+          newElement.setAttribute('animation', {
+            property: 'scale',
+            to: `${randomScale} ${randomScale} ${randomScale}`,
+            easing: 'easeOutElastic',
+            dur: 800,
+          })
+        })
+      })
+    },
+  })
 </script>
 
 </body>
