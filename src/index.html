@@ -3,147 +3,219 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <title>8th Wall + A-Frame: Tap to Place Ground</title>
-  <meta name="description" content="🌵 Tocca il terreno per posizionare un cactus">
-
-  <!-- 1. 8-Frame (versione modificata di A-Frame) - DEVE essere nel path corretto -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>AR Cactus - Tocca per posizionare</title>
+  
+  <!-- 8-Frame -->
   <script src="./external/scripts/8frame-1.5.0.min.js"></script>
   
-  <!-- 2. Engine binary 8th Wall con SLAM -->
+  <!-- Engine binary 8th Wall con SLAM -->
   <script async src="./external/xr/xr.js" data-preload-chunks="slam"></script>
 
   <style>
-    body { margin: 0; overflow: hidden; }
-    .over {
+    body { margin: 0; overflow: hidden; font-family: sans-serif; }
+    #info {
       position: fixed;
-      bottom: 30px;
+      bottom: 20px;
       left: 0;
       right: 0;
       text-align: center;
-      pointer-events: none;
-      z-index: 10;
-    }
-    #promptText {
       background: rgba(0,0,0,0.7);
       color: white;
-      padding: 12px 28px;
-      border-radius: 40px;
-      font-size: 18px;
-      display: inline-block;
-      font-family: sans-serif;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 20px;
+      pointer-events: none;
+      z-index: 10;
+      font-size: 16px;
     }
     #status {
       position: fixed;
       top: 20px;
       left: 20px;
-      background: rgba(0,0,0,0.5);
-      color: lime;
-      padding: 5px 10px;
+      right: 20px;
+      background: rgba(0,0,0,0.6);
+      color: #ffaa00;
+      padding: 8px 12px;
       border-radius: 8px;
       font-family: monospace;
       font-size: 12px;
       pointer-events: none;
       z-index: 10;
+      text-align: center;
     }
+    .hidden { display: none; }
   </style>
 </head>
 
 <body>
 
-<div class="over">
-  <span id="promptText">🌵 Tocca il terreno per posizionare</span>
-</div>
-<div id="status">🟡 Inizializzazione AR...</div>
+<div id="status">🟡 Avvio AR...</div>
+<div id="info">🌵 Tocca il terreno per posizionare un cactus</div>
 
-<!-- 
-  ATTENZIONE: Secondo la documentazione, per world tracking devi avere:
-  - xrconfig (obbligatorio)
-  - xrweb (per world tracking)
--->
+<!-- Scena A-Frame con configurazione 8th Wall -->
 <a-scene
   xrconfig
   xrweb="allowedDevices: any"
-  renderer="colorManagement:true">
+  renderer="colorManagement: true; antialias: true"
+  xrweb="enableInteraction: true">
 
-  <a-assets>
-    <img id="groundTex" src="assets/sand.jpg">
-    <a-asset-item id="cactusModel" src="assets/cactus.glb"></a-asset-item>
+  <!-- Asset: modelli e texture -->
+  <a-assets timeout="10000">
+    <!-- Crea un cactus semplice con primitive A-Frame (non serve GLB esterno) -->
+    <a-mixin id="cactus">
+      <a-entity>
+        <!-- Corpo principale -->
+        <a-cylinder radius="0.3" height="0.8" color="#2d6a2d" position="0 0.4 0"></a-cylinder>
+        <!-- Bracci -->
+        <a-cylinder radius="0.15" height="0.5" color="#2d6a2d" position="-0.35 0.6 0" rotation="0 0 30"></a-cylinder>
+        <a-cylinder radius="0.15" height="0.5" color="#2d6a2d" position="0.35 0.6 0" rotation="0 0 -30"></a-cylinder>
+        <!-- Testa -->
+        <a-sphere radius="0.25" color="#2d6a2d" position="0 0.9 0"></a-sphere>
+        <!-- Spine (piccoli coni) -->
+        <a-cone radius-bottom="0.05" radius-top="0" height="0.1" color="#c8e6c8" position="0.2 0.5 0.3"></a-cone>
+        <a-cone radius-bottom="0.05" radius-top="0" height="0.1" color="#c8e6c8" position="-0.2 0.5 0.3"></a-cone>
+        <a-cone radius-bottom="0.05" radius-top="0" height="0.1" color="#c8e6c8" position="0.15 0.8 0.25"></a-cone>
+        <a-cone radius-bottom="0.05" radius-top="0" height="0.1" color="#c8e6c8" position="-0.15 0.8 0.25"></a-cone>
+      </a-entity>
+    </a-mixin>
   </a-assets>
 
-  <!-- Camera: 8th Wall la gestisce automaticamente -->
+  <!-- Camera -->
   <a-camera id="camera"></a-camera>
 
-  <!-- Luce ambientale + direzionale -->
+  <!-- Luci -->
   <a-light type="ambient" intensity="0.6"></a-light>
-  <a-light type="directional" intensity="0.8" position="1 2 1"></a-light>
+  <a-light type="directional" intensity="0.8" position="2 3 2"></a-light>
+  <a-light type="directional" intensity="0.4" position="-1 2 -2" color="#ffaa66"></a-light>
 
 </a-scene>
 
 <script>
-  // ===== INIZIALIZZAZIONE 8TH WALL PER A-FRAME =====
-  // La documentazione dice: aggiungi onxrloaded() per inizializzare
-  window.onxrloaded = function() {
-    const statusEl = document.getElementById('status');
-    statusEl.innerText = '🟢 AR pronto! Tocca il terreno';
+  // Attendi che tutto sia caricato
+  window.addEventListener('load', () => {
+    const statusDiv = document.getElementById('status');
+    const infoDiv = document.getElementById('info');
     
-    // Opzionale: configurazioni aggiuntive
-    if (XR8.XrController) {
-      XR8.XrController.configure({
-        planeDetection: {
-          enabled: true,
-          classificationType: 'floor'
-        }
-      });
+    // Inizializzazione 8th Wall
+    window.onxrloaded = function() {
+      console.log('XR loaded, initializing...');
+      statusDiv.innerHTML = '🟢 AR pronto! Tocca il terreno';
+      statusDiv.style.color = '#aaffaa';
+      
+      // Configura rilevamento piani
+      if (XR8 && XR8.XrController) {
+        XR8.XrController.configure({
+          planeDetection: {
+            enabled: true,
+            classificationType: 'floor'
+          }
+        });
+      }
+      
+      // Nascondi il messaggio di info dopo 3 secondi
+      setTimeout(() => {
+        if (infoDiv) infoDiv.style.opacity = '0.5';
+      }, 5000);
+    };
+    
+    // Se XR8 è già caricato
+    if (window.XR8) {
+      window.onxrloaded();
     }
-  };
-
-  // Se XR8 è già caricato, chiamalo subito
-  if (window.XR8) {
-    window.onxrloaded();
-  }
-
-  // ===== TAP TO PLACE (usando gli eventi di A-Frame) =====
-  const promptEl = document.getElementById('promptText');
-  const statusEl = document.getElementById('status');
-  
-  // Ascolta l'evento 'click' su tutta la scena (gestito da 8th Wall)
-  document.querySelector('a-scene').addEventListener('click', (event) => {
-    // L'evento contiene il punto di intersezione con il terreno rilevato da 8th Wall
-    if (event.detail && event.detail.intersection) {
-      const point = event.detail.intersection.point;
+    
+    // Funzione per posizionare cactus
+    function placeCactus(position) {
+      const scene = document.querySelector('a-scene');
       
-      // Nascondi prompt dopo primo tap
-      if (promptEl) promptEl.style.display = 'none';
-      
-      // Crea cactus
+      // Crea nuovo cactus
       const cactus = document.createElement('a-entity');
-      cactus.setAttribute('position', `${point.x} ${point.y} ${point.z}`);
-      cactus.setAttribute('rotation', `0 ${Math.random() * 360} 0`);
-      cactus.setAttribute('scale', '0.001 0.001 0.001');
+      cactus.setAttribute('mixin', 'cactus');
+      cactus.setAttribute('position', `${position.x} ${position.y} ${position.z}`);
+      
+      // Rotazione casuale
+      const randomRot = Math.random() * 360;
+      cactus.setAttribute('rotation', `0 ${randomRot} 0`);
+      
+      // Scala iniziale (per animazione)
+      cactus.setAttribute('scale', '0 0 0');
       cactus.setAttribute('visible', 'true');
-      cactus.setAttribute('gltf-model', '#cactusModel');
+      
+      // Aggiungi ombra
       cactus.setAttribute('shadow', 'receive: false; cast: true');
       
-      document.querySelector('a-scene').appendChild(cactus);
+      // Aggiungi alla scena
+      scene.appendChild(cactus);
       
-      cactus.addEventListener('model-loaded', () => {
+      // Animazione di crescita
+      setTimeout(() => {
         cactus.setAttribute('animation', {
           property: 'scale',
-          to: '0.7 0.7 0.7',
+          to: '0.6 0.6 0.6',
           easing: 'easeOutElastic',
           dur: 600
         });
-      });
+      }, 10);
       
-      statusEl.innerText = '🌵 Cactus posizionato!';
+      // Feedback visivo
+      statusDiv.innerHTML = '🌵 Cactus posizionato!';
+      statusDiv.style.color = '#aaffaa';
       setTimeout(() => {
-        if (statusEl.innerText === '🌵 Cactus posizionato!') {
-          statusEl.innerText = '🟢 AR pronto! Tocca il terreno';
+        if (statusDiv.innerHTML === '🌵 Cactus posizionato!') {
+          statusDiv.innerHTML = '🟢 AR pronto!';
         }
       }, 2000);
+      
+      // Effetto sonoro (opzionale - solo se vuoi)
+      // new Audio('data:audio/wav;base64,U3RlcmVv...').play();
     }
+    
+    // Gestione tap usando A-Frame + 8th Wall
+    const scene = document.querySelector('a-scene');
+    
+    if (scene) {
+      scene.addEventListener('click', (evt) => {
+        console.log('Tap detected', evt);
+        
+        // Metodo 1: usare l'intersezione di 8th Wall
+        if (evt.detail && evt.detail.intersection && evt.detail.intersection.point) {
+          const point = evt.detail.intersection.point;
+          placeCactus(point);
+        }
+        // Metodo 2: fallback con hit test manuale
+        else if (XR8 && XR8.XrController && XR8.XrController.reticleManager) {
+          const x = evt.clientX / window.innerWidth;
+          const y = evt.clientY / window.innerHeight;
+          
+          XR8.XrController.reticleManager.hitTest(x, y, (err, hit) => {
+            if (!err && hit && hit.position) {
+              placeCactus(hit.position);
+            } else {
+              console.log('No ground detected');
+              statusDiv.innerHTML = '⚠️ Tocca il terreno (piano)';
+              statusDiv.style.color = '#ffaa00';
+              setTimeout(() => {
+                if (statusDiv.innerHTML === '⚠️ Tocca il terreno (piano)') {
+                  statusDiv.innerHTML = '🟢 AR pronto!';
+                }
+              }, 1500);
+            }
+          });
+        }
+      });
+    }
+    
+    // Supporto touch mobile
+    scene.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches[0]) {
+        e.preventDefault();
+        const evt = new MouseEvent('click', {
+          clientX: e.touches[0].clientX,
+          clientY: e.touches[0].clientY
+        });
+        scene.dispatchEvent(evt);
+      }
+    });
   });
 </script>
 
