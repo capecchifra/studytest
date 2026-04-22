@@ -1,50 +1,63 @@
-// Component that places cacti where the ground is clicked
-
-export const tapPlaceComponent = {
-  schema: {
-    min: {default: 6},
-    max: {default: 10},
-  },
+// Componente cursore + posizionamento cactus
+AFRAME.registerComponent('cursor-place', {
   init() {
-    const ground = document.getElementById('ground')
-    this.prompt = document.getElementById('promptText')
+    this.raycaster = new THREE.Raycaster()
+    this.camera = document.getElementById('camera')
+    this.threeCamera = this.camera.getObject3D('camera')
+    this.ground = document.getElementById('ground')
+    this.rayOrigin = new THREE.Vector2(0, 0)
+    this.cursorLocation = new THREE.Vector3(0, 0, 0)
+    this.cursor = document.getElementById('cursor')
+    this.currentCactus = null
     
-    ground.addEventListener('click', (event) => {
-      // Dismiss the prompt text.
-      this.prompt.style.display = 'none'
+    this.el.sceneEl.addEventListener('click', () => {
+      if (!this.cursorLocation) return
       
-      // Create new entity for the new object
-      const newElement = document.createElement('a-entity')
-
-      // The raycaster gives a location of the touch in the scene
-      const touchPoint = event.detail.intersection.point
-      newElement.setAttribute('position', touchPoint)
-
-      const randomYRotation = Math.random() * 360
-      newElement.setAttribute('rotation', `0 ${randomYRotation} 0`)
-
-      const randomScale = Math.floor(Math.random() * (Math.floor(this.data.max) - Math.ceil(this.data.min)) + Math.ceil(this.data.min))
-
-      newElement.setAttribute('visible', 'false')
-      newElement.setAttribute('scale', '0.0001 0.0001 0.0001')
-
-      newElement.setAttribute('shadow', {
-        receive: false,
-      })
-
-      newElement.setAttribute('gltf-model', '#cactusModel')
-      this.el.sceneEl.appendChild(newElement)
-
-      newElement.addEventListener('model-loaded', () => {
-        // Once the model is loaded, we are ready to show it popping in using an animation
-        newElement.setAttribute('visible', 'true')
-        newElement.setAttribute('animation', {
+      if (this.currentCactus) {
+        this.currentCactus.parentNode?.removeChild(this.currentCactus)
+      }
+      
+      const cactus = document.createElement('a-entity')
+      cactus.setAttribute('gltf-model', '#cactusModel')
+      cactus.setAttribute('position', this.cursorLocation)
+      cactus.setAttribute('scale', '0 0 0')
+      cactus.setAttribute('shadow', { receive: false })
+      cactus.setAttribute('rotation', `0 ${Math.random() * 360} 0`)
+      
+      this.el.sceneEl.appendChild(cactus)
+      this.currentCactus = cactus
+      
+      setTimeout(() => {
+        cactus.setAttribute('animation', {
           property: 'scale',
-          to: `${randomScale} ${randomScale} ${randomScale}`,
+          to: '6 6 6',
           easing: 'easeOutElastic',
-          dur: 800,
+          dur: 800
         })
-      })
+      }, 10)
+      
+      const prompt = document.getElementById('promptText')
+      if (prompt) prompt.style.display = 'none'
     })
   },
-}
+  
+  tick() {
+    if (!this.ground?.object3D) return
+    
+    this.raycaster.setFromCamera(this.rayOrigin, this.threeCamera)
+    const intersects = this.raycaster.intersectObject(this.ground.object3D, true)
+    
+    if (intersects.length > 0) {
+      this.cursorLocation = intersects[0].point
+    }
+    
+    if (this.cursor) {
+      this.cursor.object3D.position.lerp(this.cursorLocation, 0.3)
+      this.cursor.object3D.position.y += 0.05
+      this.cursor.object3D.rotation.y = this.threeCamera.rotation.y
+    }
+  }
+})
+
+// Attiva il componente sulla scena
+document.querySelector('a-scene').setAttribute('cursor-place', '')
