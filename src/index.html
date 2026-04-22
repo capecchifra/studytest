@@ -3,262 +3,163 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-  <title>AR Cactus - Versione Definitiva</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>A-Frame: Tap to Place Ground</title>
   
+  <!-- CSS -->
+  <link rel="stylesheet" href="index.css">
+  
+  <!-- Scripts 8th Wall -->
   <script src="./external/scripts/8frame-1.5.0.min.js"></script>
-  <script async src="./external/xr/xr.js" data-preload-chunks="slam"></script>
+  <script src="./external/xrextras/xrextras.js"></script>
+  <script src="./external/landing-page/landing-page.js"></script>
+  <script src="./external/xr/xr.js" async data-preload-chunks="slam"></script>
+
+  <meta name="8thwall:renderer" content="aframe:1.5.0"/>
+  <meta name="8thwall:package" content="@8thwall.xrextras"/>
+  <meta name="8thwall:package" content="@8thwall.landing-page"/>
 
   <style>
-    body { margin: 0; overflow: hidden; font-family: sans-serif; }
-    #debug {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      right: 10px;
-      background: rgba(0,0,0,0.85);
-      color: #0f0;
-      padding: 10px;
-      border-radius: 8px;
-      font-family: monospace;
-      font-size: 11px;
-      z-index: 200;
+    /* Stile inline nel caso index.css non si carichi */
+    .over {
+      z-index: 10;
       pointer-events: none;
-      word-break: break-word;
-      max-height: 120px;
-      overflow-y: auto;
-    }
-    #instructions {
-      position: fixed;
-      bottom: 30px;
-      left: 20px;
-      right: 20px;
-      background: rgba(0,0,0,0.7);
-      color: white;
-      padding: 15px;
-      border-radius: 12px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      right: 0;
       text-align: center;
-      font-size: 18px;
-      font-weight: bold;
-      z-index: 200;
-      pointer-events: none;
-    }
-    button {
-      position: fixed;
-      bottom: 100px;
-      right: 20px;
-      background: #ff6600;
       color: white;
-      border: none;
-      padding: 12px 20px;
-      border-radius: 30px;
-      font-size: 16px;
-      z-index: 200;
-      pointer-events: auto;
-      cursor: pointer;
+      font-family: 'Nunito', monospace;
+      text-shadow: 0px 0px 5px black;
     }
-    .status-ok { background: rgba(0,100,0,0.9); color: #0f0; }
-    .status-error { background: rgba(100,0,0,0.9); color: #f00; }
+    #promptText {
+      font-size: 2em;
+      bottom: 12vh;
+      position: absolute;
+      left: 50%;
+      transform: translate(-50%, 0);
+    }
   </style>
 </head>
 
 <body>
 
-<div id="debug">
-  🔄 Inizializzazione...
+<div class="over">
+  <span id="promptText">🌵 Tap To Place Cactus</span>
 </div>
-<div id="instructions">
-  🌵 MUOVI IL TELEFONO LENTAMENTE<br>
-  <span style="font-size:14px">Aspetta che appaia il mirino → poi tocca</span>
-</div>
-<button id="testBtn">🔘 TEST TAP</button>
 
 <a-scene
   xrconfig
-  xrweb="allowedDevices: any"
-  cursor="rayOrigin: mouse"
-  raycaster="objects: .clickable; far: 10; interval: 50"
-  renderer="colorManagement: true; antialias: true">
+  tap-place
+  landing-page
+  xrextras-loading
+  xrextras-runtime-error
+  renderer="colorManagement:true"
+  xrweb="allowedDevices: any">
 
   <a-assets>
-    <a-mixin id="cactus">
+    <!-- Usa un cactus semplice (visto che cactus.glb manca) -->
+    <a-mixin id="cactusModel">
       <a-entity>
-        <a-cylinder radius="0.25" height="0.7" color="#2d6a2d" position="0 0.35 0"></a-cylinder>
-        <a-cylinder radius="0.1" height="0.4" color="#2d6a2d" position="-0.28 0.55 0" rotation="0 0 30"></a-cylinder>
-        <a-cylinder radius="0.1" height="0.4" color="#2d6a2d" position="0.28 0.55 0" rotation="0 0 -30"></a-cylinder>
-        <a-sphere radius="0.22" color="#2d6a2d" position="0 0.85 0"></a-sphere>
-        <a-sphere radius="0.1" color="#ff69b4" position="0 1.05 0.12"></a-sphere>
-        <a-sphere radius="0.06" color="#ffdd44" position="0 1.05 0.22"></a-sphere>
+        <a-cylinder radius="0.3" height="0.8" color="#2d6a2d" position="0 0.4 0"></a-cylinder>
+        <a-cylinder radius="0.12" height="0.5" color="#2d6a2d" position="-0.35 0.65 0" rotation="0 0 35"></a-cylinder>
+        <a-cylinder radius="0.12" height="0.5" color="#2d6a2d" position="0.35 0.65 0" rotation="0 0 -35"></a-cylinder>
+        <a-sphere radius="0.28" color="#2d6a2d" position="0 0.95 0"></a-sphere>
+        <a-sphere radius="0.1" color="#ff69b4" position="0 1.15 0.12"></a-sphere>
       </a-entity>
     </a-mixin>
   </a-assets>
 
-  <a-camera id="camera"></a-camera>
+  <a-camera
+    id="camera"
+    position="0 8 8"
+    raycaster="objects: .cantap"
+    cursor="fuse: false; rayOrigin: mouse">
+  </a-camera>
 
-  <!-- Piano cliccabile (più piccolo e visibile per debug) -->
-  <a-plane 
-    id="ground-plane"
-    class="clickable"
-    rotation="-90 0 0"
-    position="0 -0.5 0"
-    width="5"
-    height="5"
-    material="shader: standard; color: #88ff88; transparent: true; opacity: 0.3; side: double">
-  </a-plane>
+  <a-entity
+    light="type: directional; intensity: 0.8; castShadow: true; target: #camera"
+    position="1 4.3 2.5"
+    shadow>
+  </a-entity>
 
-  <a-light type="ambient" intensity="0.7"></a-light>
-  <a-light type="directional" intensity="1.0" position="2 3 2"></a-light>
+  <a-light type="ambient" intensity="0.5"></a-light>
 
+  <a-box
+    id="ground"
+    class="cantap"
+    scale="1000 2 1000"
+    position="0 -0.99 0"
+    material="shader: shadow; transparent: true; opacity: 0.4"
+    shadow>
+  </a-box>
 </a-scene>
 
 <script>
-  const debug = document.getElementById('debug');
-  const instructions = document.getElementById('instructions');
-  
-  function log(msg) {
-    console.log(msg);
-    debug.innerHTML = new Date().toLocaleTimeString() + ' - ' + msg + '<br>' + debug.innerHTML;
-    if (debug.innerHTML.split('<br>').length > 8) {
-      debug.innerHTML = debug.innerHTML.split('<br>').slice(0, 7).join('<br>');
-    }
-  }
-  
-  log('Pagina caricata');
-  
-  // ===== INIZIALIZZAZIONE 8TH WALL =====
+  // Inizializzazione 8th Wall binary
   window.onxrloaded = function() {
-    log('✅ XR8 caricato!');
-    
+    console.log('8th Wall binary ready');
+    // Disabilita plane detection per usare il box fittizio
     if (XR8 && XR8.XrController) {
-      XR8.XrController.configure({
-        planeDetection: { enabled: true, classificationType: 'floor' }
-      });
-      log('✅ Plane detection configurata');
+      XR8.XrController.configure({ planeDetection: { enabled: false } });
     }
-    
-    instructions.innerHTML = '🎯 AR ATTIVO!<br><span style="font-size:14px">Cerca un pavimento, aspetta il mirino, poi TOCCHI</span>';
   };
   
   if (window.XR8) {
     window.onxrloaded();
-  } else {
-    log('⏳ Attendo XR8...');
-    window.addEventListener('xrloaded', () => {
-      log('Evento xrloaded ricevuto');
-      window.onxrloaded();
-    });
   }
-  
-  // ===== POSIZIONA CACTUS =====
-  let cactusCount = 0;
-  
-  function placeCactus(x, y, z) {
-    cactusCount++;
-    const scene = document.querySelector('a-scene');
-    const cactus = document.createElement('a-entity');
-    
-    cactus.setAttribute('mixin', 'cactus');
-    cactus.setAttribute('position', `${x} ${y} ${z}`);
-    cactus.setAttribute('rotation', `0 ${Math.random() * 360} 0`);
-    cactus.setAttribute('scale', '0 0 0');
-    
-    scene.appendChild(cactus);
-    
-    setTimeout(() => {
-      cactus.setAttribute('animation', {
-        property: 'scale',
-        to: '0.5 0.5 0.5',
-        dur: 500,
-        easing: 'easeOutElastic'
-      });
-    }, 10);
-    
-    log(`🌵 Cactus #${cactusCount} posizionato a (${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)})`);
-    
-    instructions.innerHTML = `🌵 CACTUS #${cactusCount} POSIZIONATO! 🌵`;
-    setTimeout(() => {
-      instructions.innerHTML = '🎯 TOCCHI IL PAVIMENTO per posizionare un cactus';
-    }, 2000);
-  }
-  
-  // ===== GESTIONE TAP =====
-  function handleTap(e) {
-    log(`Tap rilevato! clientX=${e.clientX}, clientY=${e.clientY}`);
-    
-    // Prova a ottenere il punto dal raycast di A-Frame
-    if (e.detail && e.detail.intersection && e.detail.intersection.point) {
-      const p = e.detail.intersection.point;
-      log(`✅ Intersezione A-Frame: (${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)})`);
-      placeCactus(p.x, p.y, p.z);
-      return;
-    }
-    
-    // Fallback: hit test di 8th Wall
-    if (XR8 && XR8.XrController && XR8.XrController.reticleManager) {
-      const x = e.clientX / window.innerWidth;
-      const y = e.clientY / window.innerHeight;
-      log(`Hit test 8th Wall: (${x.toFixed(2)}, ${y.toFixed(2)})`);
+</script>
+
+<script>
+  // Componente tap-place (convertito da export)
+  AFRAME.registerComponent('tap-place', {
+    schema: {
+      min: {default: 6},
+      max: {default: 10},
+    },
+    init() {
+      const ground = document.getElementById('ground')
+      this.prompt = document.getElementById('promptText')
       
-      XR8.XrController.reticleManager.hitTest(x, y, (err, hit) => {
-        if (err) {
-          log(`❌ Hit test error: ${err}`);
-          instructions.innerHTML = '❌ Nessun pavimento trovato! Inquadra il terreno e riprova';
-          return;
-        }
-        if (hit && hit.position) {
-          log(`✅ Hit test OK: (${hit.position.x.toFixed(2)}, ${hit.position.y.toFixed(2)}, ${hit.position.z.toFixed(2)})`);
-          placeCactus(hit.position.x, hit.position.y, hit.position.z);
-        } else {
-          log('❌ Hit test: nessun punto valido');
-          instructions.innerHTML = '⚠️ Tocca un PAVIMENTO (superficie orizzontale)';
-        }
-      });
-    } else {
-      log('❌ XR8.XrController.reticleManager non disponibile');
-    }
-  }
-  
-  // Attacca i listener
-  window.addEventListener('load', () => {
-    log('Window load completato');
-    
-    const scene = document.querySelector('a-scene');
-    const groundPlane = document.getElementById('ground-plane');
-    
-    if (groundPlane) {
-      groundPlane.addEventListener('click', handleTap);
-      log('✅ Listener click sul ground-plane');
-    } else {
-      log('❌ ground-plane non trovato!');
-    }
-    
-    scene.addEventListener('click', handleTap);
-    log('✅ Listener click sulla scena');
-    
-    // Touch mobile
-    scene.addEventListener('touchstart', (e) => {
-      if (e.touches && e.touches[0]) {
-        e.preventDefault();
-        log(`Touch rilevato a (${e.touches[0].clientX}, ${e.touches[0].clientY})`);
-        const fakeEvent = { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY };
-        handleTap(fakeEvent);
+      if (!ground) {
+        console.error('Ground not found!')
+        return
       }
-    });
-    
-    // Bottone di test
-    document.getElementById('testBtn').addEventListener('click', () => {
-      log('🔘 BOTTONE TEST premuto - posiziono cactus di test');
-      placeCactus(0, 0, -2);
-    });
-  });
-  
-  // Debug periodico
-  setInterval(() => {
-    const reticle = XR8?.XrController?.reticleManager?.getReticlePosition?.();
-    if (reticle) {
-      log(`🔍 Mirino: (${reticle.x?.toFixed(2)}, ${reticle.y?.toFixed(2)}, ${reticle.z?.toFixed(2)})`);
-    }
-  }, 5000);
+      
+      ground.addEventListener('click', (event) => {
+        if (this.prompt) this.prompt.style.display = 'none'
+        
+        const newElement = document.createElement('a-entity')
+        const touchPoint = event.detail.intersection.point
+        newElement.setAttribute('position', touchPoint)
+
+        const randomYRotation = Math.random() * 360
+        newElement.setAttribute('rotation', `0 ${randomYRotation} 0`)
+
+        const randomScale = Math.floor(Math.random() * (Math.floor(this.data.max) - Math.ceil(this.data.min)) + Math.ceil(this.data.min))
+
+        newElement.setAttribute('visible', 'false')
+        newElement.setAttribute('scale', '0.0001 0.0001 0.0001')
+        newElement.setAttribute('shadow', { receive: false })
+        newElement.setAttribute('gltf-model', '#cactusModel')
+        
+        this.el.sceneEl.appendChild(newElement)
+
+        newElement.addEventListener('model-loaded', () => {
+          newElement.setAttribute('visible', 'true')
+          newElement.setAttribute('animation', {
+            property: 'scale',
+            to: `${randomScale} ${randomScale} ${randomScale}`,
+            easing: 'easeOutElastic',
+            dur: 800,
+          })
+        })
+      })
+    },
+  })
 </script>
 
 </body>
