@@ -10,40 +10,50 @@
   <meta name="twitter:title" content="A-Frame: Tap to Place Ground">
   <meta property="og:title" content="A-Frame: Tap to Place Ground">
   <meta property="og:site_name" content="A-Frame: Tap to Place Ground">
-  <meta name="description" content="This example allows the user to grow cacti 🌵  by tapping or clicking the ground. Showcases raycasting, spawning objects, and importing a 3D model.">
-  <meta itemprop="description" content="This example allows the user to grow cacti 🌵  by tapping or clicking the ground. Showcases raycasting, spawning objects, and importing a 3D model.">
-  <meta property="og:description" content="This example allows the user to grow cacti 🌵  by tapping or clicking the ground. Showcases raycasting, spawning objects, and importing a 3D model.">
-  <meta name="twitter:description" content="This example allows the user to grow cacti 🌵  by tapping or clicking the ground. Showcases raycasting, spawning objects, and importing a 3D model.">
-  <script crossorigin="anonymous" src="./external/scripts/8frame-1.5.0.min.js"></script>
-  <script crossorigin="anonymous" src="./external/xrextras/xrextras.js"></script>
-  <script crossorigin="anonymous" src="./external/landing-page/landing-page.js"></script>
-  <script crossorigin="anonymous" src="./external/xr/xr.js" async="true" data-preload-chunks="slam">
-  </script>
+  <meta name="description" content="This example allows the user to grow cacti 🌵 by tapping or clicking the ground.">
+  
+  <script src="./external/scripts/8frame-1.5.0.min.js"></script>
+  <script src="./external/xrextras/xrextras.js"></script>
+  <script src="./external/landing-page/landing-page.js"></script>
+  <script src="./external/xr/xr.js" async data-preload-chunks="slam"></script>
 
-<!-- Copyright (c) 2024 8th Wall, Inc. -->
-<!-- head.html is optional; elements will be added to your html head before app.js is loaded. -->
+  <meta name="8thwall:renderer" content="aframe:1.5.0"/>
+  <meta name="8thwall:package" content="@8thwall.xrextras"/>
+  <meta name="8thwall:package" content="@8thwall.landing-page"/>
 
-<!-- Use "8thwall:" meta tags to hook into 8th Wall's build process and developer tools. -->
-<meta name="8thwall:renderer" content="aframe:1.5.0"/>
-<meta name="8thwall:package" content="@8thwall.xrextras"/>
-<meta name="8thwall:package" content="@8thwall.landing-page"/>
-
-<!-- Add GIF for sharing -->
-<meta property="og:image" content="https://i.giphy.com/media/rAi32DNlsWNpItOpDr/giphy.gif"/>
-
+  <style>
+    .over {
+      position: fixed;
+      bottom: 30px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      z-index: 10;
+      pointer-events: none;
+    }
+    #promptText {
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 12px 28px;
+      border-radius: 40px;
+      font-size: 18px;
+      display: inline-block;
+      font-family: sans-serif;
+    }
+  </style>
 </head>
 
 <body>
-<script src="bundle.js"></script>
-<!-- Copyright (c) 2022 8th Wall, Inc. -->
-<!-- body.html is optional; elements will be added to your html body after app.js is loaded. -->
 
 <div class="over">
-  <span id="promptText">Tap To Place Model</span>
+  <span id="promptText">🌵 Tocca il terreno per posizionare</span>
 </div>
 
-<!-- Add the tap-place component to the scene so it has an effect -->
+<!-- 
+  MODIFICA 1: aggiunto xrconfig (obbligatorio!)
+-->
 <a-scene
+  xrconfig
   tap-place
   landing-page
   xrextras-loading
@@ -58,42 +68,26 @@
     defaultEnvironmentSkyTopColor: #5ac8fa;
     defaultEnvironmentSkyGradientStrength: 0.5;">
 
-  <!-- We can define assets here to be loaded when A-Frame initializes -->
   <a-assets>
     <img id="groundTex" src="assets/sand.jpg">
     <a-asset-item id="cactusModel" src="assets/cactus.glb"></a-asset-item>
   </a-assets>
 
-  <!-- The raycaster will emit mouse events on scene objects specified with the cantap class -->
   <a-camera
     id="camera"
     position="0 8 8"
     raycaster="objects: .cantap"
-    cursor="
-      fuse: false;
-      rayOrigin: mouse;">
+    cursor="fuse: false; rayOrigin: mouse;">
   </a-camera>
 
   <a-entity
-    light="
-      type: directional;
-      intensity: 0.8;
-      castShadow: true;
-      shadowMapHeight:2048;
-      shadowMapWidth:2048;
-      shadowCameraTop: 40;
-      shadowCameraBottom: -40;
-      shadowCameraRight: 40;
-      shadowCameraLeft: -40;
-      target: #camera"
-    xrextras-attach="target: camera; offset: 8 15 4"
+    light="type: directional; intensity: 0.8; castShadow: true; target: #camera"
     position="1 4.3 2.5"
     shadow>
   </a-entity>
 
   <a-light type="ambient" intensity="0.5"></a-light>
 
-  <!-- Adding the cantap class allows the ground to be clicked -->
   <a-box
     id="ground"
     class="cantap"
@@ -104,6 +98,22 @@
   </a-box>
 </a-scene>
 
-</body>
+<script>
+  // MODIFICA 2: inizializzazione obbligatoria per il binary
+  window.onxrloaded = function() {
+    console.log('8th Wall binary ready');
+    if (XR8 && XR8.XrController) {
+      // Disabilita plane detection per usare il box fittizio
+      XR8.XrController.configure({ planeDetection: { enabled: false } });
+    }
+  };
+  
+  if (window.XR8) {
+    window.onxrloaded();
+  } else {
+    window.addEventListener('xrloaded', window.onxrloaded);
+  }
+</script>
 
+</body>
 </html>
