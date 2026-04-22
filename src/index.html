@@ -1,108 +1,35 @@
 <!DOCTYPE html>
 <html>
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <title>A-Frame: Tap to Place Ground</title>
-  
-  <!-- CSS inline (evita file esterni) -->
-  <style>
-    .over {
-      z-index: 10;
-      pointer-events: none;
-      position: absolute;
-      top: 0;
-      left: 0;
-      bottom: 0;
-      right: 0;
-      text-align: center;
-      color: white;
-      font-family: 'Nunito', monospace;
-      text-shadow: 0px 0px 5px black;
-    }
-    #promptText {
-      font-size: 2em;
-      bottom: 12vh;
-      position: absolute;
-      left: 50%;
-      transform: translate(-50%, 0);
-      background: rgba(0,0,0,0.6);
-      padding: 10px 20px;
-      border-radius: 40px;
-      white-space: nowrap;
-    }
-    @media (max-width: 600px) {
-      #promptText { font-size: 1.2em; white-space: normal; width: 80%; text-align: center; }
-    }
-  </style>
-  
-  <!-- Scripts 8th Wall -->
+  <title>AR Cactus</title>
   <script src="./external/scripts/8frame-1.5.0.min.js"></script>
-  <script src="./external/xrextras/xrextras.js"></script>
-  <script src="./external/landing-page/landing-page.js"></script>
   <script src="./external/xr/xr.js" async data-preload-chunks="slam"></script>
-
   <meta name="8thwall:renderer" content="aframe:1.5.0"/>
 </head>
-
 <body>
 
-<div class="over">
-  <span id="promptText">🌵 Tocca il terreno per posizionare un cactus</span>
+<div style="position:fixed; bottom:20px; left:0; right:0; text-align:center; background:black; color:white; padding:15px; z-index:100; font-size:20px">
+  🔴 INIZIALIZZAZIONE...
 </div>
 
-<a-scene
-  xrconfig
-  tap-place
-  landing-page
-  xrextras-loading
-  xrextras-runtime-error
-  renderer="colorManagement:true"
-  xrweb="allowedDevices: any">
-
-  <a-assets>
-    <!-- Uso un cactus semplice fatto con primitive - niente file esterni -->
-  </a-assets>
-
-  <a-camera
-    id="camera"
-    position="0 8 8"
-    raycaster="objects: .cantap"
-    cursor="fuse: false; rayOrigin: mouse">
-  </a-camera>
-
-  <a-entity
-    light="type: directional; intensity: 0.8; castShadow: true; target: #camera"
-    position="1 4.3 2.5"
-    shadow>
-  </a-entity>
-
-  <a-light type="ambient" intensity="0.5"></a-light>
-
-  <!-- Terreno cliccabile -->
-  <a-box
-    id="ground"
-    class="cantap"
-    scale="1000 2 1000"
-    position="0 -0.99 0"
-    material="shader: shadow; transparent: true; opacity: 0.4"
-    shadow>
-  </a-box>
+<a-scene xrconfig xrweb="allowedDevices: any" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
+  <a-camera position="0 8 8"></a-camera>
+  <a-light type="ambient" intensity="0.7"></a-light>
+  <a-light type="directional" position="1 2 1"></a-light>
+  <a-box id="ground" class="clickable" scale="1000 2 1000" position="0 -0.99 0" material="opacity:0"></a-box>
 </a-scene>
 
 <script>
-  // Inizializzazione 8th Wall (obbligatoria)
+  const msg = document.querySelector('div');
+  
   window.onxrloaded = function() {
-    console.log('✅ 8th Wall binary inizializzato');
+    msg.innerHTML = '✅ AR PRONTO! Tocca il terreno';
+    msg.style.background = 'green';
     if (XR8 && XR8.XrController) {
-      // Disabilita plane detection per usare il box fittizio
       XR8.XrController.configure({ planeDetection: { enabled: false } });
     }
-    // Cambia il testo quando AR è pronto
-    const prompt = document.getElementById('promptText');
-    if (prompt) prompt.innerHTML = '✅ AR pronto! Tocca il terreno';
   };
   
   if (window.XR8) {
@@ -110,113 +37,42 @@
   } else {
     window.addEventListener('xrloaded', window.onxrloaded);
   }
-</script>
-
-<script>
-  // Componente tap-place con cactus fatto con primitive (non serve file GLB)
-  AFRAME.registerComponent('tap-place', {
-    schema: {
-      min: {default: 4},
-      max: {default: 8},
-    },
-    init() {
-      const ground = document.getElementById('ground');
-      const prompt = document.getElementById('promptText');
-      
-      if (!ground) {
-        console.error('Ground non trovato!');
-        return;
-      }
-      
-      // Funzione per creare un cactus con forme geometriche
-      const createCactusPrimitive = () => {
-        const group = document.createElement('a-entity');
+  
+  // Aspetta la scena
+  setTimeout(() => {
+    const ground = document.getElementById('ground');
+    if (ground) {
+      ground.addEventListener('click', (e) => {
+        msg.innerHTML = '🌵 TAP RILEVATO! Posiziono cactus...';
         
-        // Corpo principale
-        const body = document.createElement('a-cylinder');
-        body.setAttribute('radius', '0.3');
-        body.setAttribute('height', '0.8');
-        body.setAttribute('color', '#2d6a2d');
-        body.setAttribute('position', '0 0.4 0');
-        group.appendChild(body);
-        
-        // Braccio sinistro
-        const armLeft = document.createElement('a-cylinder');
-        armLeft.setAttribute('radius', '0.12');
-        armLeft.setAttribute('height', '0.5');
-        armLeft.setAttribute('color', '#2d6a2d');
-        armLeft.setAttribute('position', '-0.35 0.65 0');
-        armLeft.setAttribute('rotation', '0 0 35');
-        group.appendChild(armLeft);
-        
-        // Braccio destro
-        const armRight = document.createElement('a-cylinder');
-        armRight.setAttribute('radius', '0.12');
-        armRight.setAttribute('height', '0.5');
-        armRight.setAttribute('color', '#2d6a2d');
-        armRight.setAttribute('position', '0.35 0.65 0');
-        armRight.setAttribute('rotation', '0 0 -35');
-        group.appendChild(armRight);
-        
-        // Testa
-        const head = document.createElement('a-sphere');
-        head.setAttribute('radius', '0.28');
-        head.setAttribute('color', '#2d6a2d');
-        head.setAttribute('position', '0 0.95 0');
-        group.appendChild(head);
-        
-        // Fiore
-        const flower = document.createElement('a-sphere');
-        flower.setAttribute('radius', '0.1');
-        flower.setAttribute('color', '#ff69b4');
-        flower.setAttribute('position', '0 1.15 0.12');
-        group.appendChild(flower);
-        
-        return group;
-      };
-      
-      ground.addEventListener('click', (event) => {
-        console.log('Tap rilevato sul terreno!');
-        
-        // Nascondi il prompt
-        if (prompt) prompt.style.display = 'none';
-        
-        // Crea il cactus
-        const cactus = createCactusPrimitive();
-        
-        // Posizione dal tap
-        const touchPoint = event.detail.intersection.point;
-        cactus.setAttribute('position', touchPoint);
-        console.log('Posizione:', touchPoint);
-        
-        // Rotazione casuale
-        const randomYRotation = Math.random() * 360;
-        cactus.setAttribute('rotation', `0 ${randomYRotation} 0`);
-        
-        // Scala casuale
-        const randomScale = Math.floor(Math.random() * (this.data.max - this.data.min) + this.data.min);
-        
-        // Scala iniziale 0 (invisibile)
+        const cactus = document.createElement('a-cylinder');
+        cactus.setAttribute('radius', '0.3');
+        cactus.setAttribute('height', '0.8');
+        cactus.setAttribute('color', '#2d6a2d');
+        cactus.setAttribute('position', e.detail.intersection.point);
         cactus.setAttribute('scale', '0 0 0');
-        cactus.setAttribute('shadow', 'receive: false; cast: true');
         
-        // Aggiungi alla scena
-        this.el.sceneEl.appendChild(cactus);
+        document.querySelector('a-scene').appendChild(cactus);
         
-        // Animazione di crescita
         setTimeout(() => {
           cactus.setAttribute('animation', {
             property: 'scale',
-            to: `${randomScale} ${randomScale} ${randomScale}`,
-            easing: 'easeOutElastic',
-            dur: 600,
+            to: '1 1 1',
+            dur: 500,
+            easing: 'easeOutElastic'
           });
         }, 10);
+        
+        setTimeout(() => {
+          msg.innerHTML = '✅ AR PRONTO! Tocca il terreno';
+        }, 2000);
       });
-      
-      console.log('✅ Componente tap-place registrato');
-    },
-  });
+      console.log('Ground trovato, listener aggiunto');
+    } else {
+      console.error('Ground NON trovato');
+      msg.innerHTML = '❌ ERRORE: ground non trovato';
+    }
+  }, 2000);
 </script>
 
 </body>
