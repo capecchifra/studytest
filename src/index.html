@@ -20,29 +20,6 @@
   <meta name="8thwall:package" content="@8thwall.xrextras"/>
   <meta name="8thwall:package" content="@8thwall.landing-page"/>
 
-  <style>
-    /* Stile inline nel caso index.css non si carichi */
-    .over {
-      z-index: 10;
-      pointer-events: none;
-      position: absolute;
-      top: 0;
-      left: 0;
-      bottom: 0;
-      right: 0;
-      text-align: center;
-      color: white;
-      font-family: 'Nunito', monospace;
-      text-shadow: 0px 0px 5px black;
-    }
-    #promptText {
-      font-size: 2em;
-      bottom: 12vh;
-      position: absolute;
-      left: 50%;
-      transform: translate(-50%, 0);
-    }
-  </style>
 </head>
 
 <body>
@@ -61,16 +38,9 @@
   xrweb="allowedDevices: any">
 
   <a-assets>
-    <!-- Usa un cactus semplice (visto che cactus.glb manca) -->
-    <a-mixin id="cactusModel">
-      <a-entity>
-        <a-cylinder radius="0.3" height="0.8" color="#2d6a2d" position="0 0.4 0"></a-cylinder>
-        <a-cylinder radius="0.12" height="0.5" color="#2d6a2d" position="-0.35 0.65 0" rotation="0 0 35"></a-cylinder>
-        <a-cylinder radius="0.12" height="0.5" color="#2d6a2d" position="0.35 0.65 0" rotation="0 0 -35"></a-cylinder>
-        <a-sphere radius="0.28" color="#2d6a2d" position="0 0.95 0"></a-sphere>
-        <a-sphere radius="0.1" color="#ff69b4" position="0 1.15 0.12"></a-sphere>
-      </a-entity>
-    </a-mixin>
+    <!-- PERCORSI CORRETTI: src/assets/ -->
+    <img id="groundTex" src="src/assets/sand.jpg">
+    <a-asset-item id="cactusModel" src="src/assets/cactus.glb"></a-asset-item>
   </a-assets>
 
   <a-camera
@@ -99,10 +69,9 @@
 </a-scene>
 
 <script>
-  // Inizializzazione 8th Wall binary
+  // Inizializzazione 8th Wall
   window.onxrloaded = function() {
-    console.log('8th Wall binary ready');
-    // Disabilita plane detection per usare il box fittizio
+    console.log('8th Wall ready');
     if (XR8 && XR8.XrController) {
       XR8.XrController.configure({ planeDetection: { enabled: false } });
     }
@@ -114,7 +83,7 @@
 </script>
 
 <script>
-  // Componente tap-place (convertito da export)
+  // Componente tap-place
   AFRAME.registerComponent('tap-place', {
     schema: {
       min: {default: 6},
@@ -122,7 +91,7 @@
     },
     init() {
       const ground = document.getElementById('ground')
-      this.prompt = document.getElementById('promptText')
+      const prompt = document.getElementById('promptText')
       
       if (!ground) {
         console.error('Ground not found!')
@@ -130,7 +99,7 @@
       }
       
       ground.addEventListener('click', (event) => {
-        if (this.prompt) this.prompt.style.display = 'none'
+        if (prompt) prompt.style.display = 'none'
         
         const newElement = document.createElement('a-entity')
         const touchPoint = event.detail.intersection.point
@@ -139,7 +108,7 @@
         const randomYRotation = Math.random() * 360
         newElement.setAttribute('rotation', `0 ${randomYRotation} 0`)
 
-        const randomScale = Math.floor(Math.random() * (Math.floor(this.data.max) - Math.ceil(this.data.min)) + Math.ceil(this.data.min))
+        const randomScale = Math.floor(Math.random() * (this.data.max - this.data.min) + this.data.min)
 
         newElement.setAttribute('visible', 'false')
         newElement.setAttribute('scale', '0.0001 0.0001 0.0001')
